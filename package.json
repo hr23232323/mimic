@@ -1,0 +1,47 @@
+{
+  "name": "mimic-desktop",
+  "version": "0.1.0",
+  "description": "The invisible developer in your menu bar. Paste screenshots, get Tailwind CSS.",
+  "author": "Mimic Contributors",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/mimic-desktop.git"
+  },
+  "keywords": [
+    "mimic",
+    "ui",
+    "screenshot-to-code",
+    "tailwind",
+    "gpt-4o",
+    "tauri",
+    "rust",
+    "desktop-app",
+    "code-generation"
+  ],
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-opener": "^2",
+    "@tauri-apps/plugin-store": "^2.4.1",
+    "lucide-react": "^0.561.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "tailwindcss": "^4.1.18"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.18",
+    "@tauri-apps/cli": "^2",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "@vitejs/plugin-react": "^4.6.0",
+    "typescript": "~5.8.3",
+    "vite": "^7.0.4"
+  }
+}
