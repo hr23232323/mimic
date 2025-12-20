@@ -57,6 +57,56 @@ async fn generate_code(api_key: String, image_data: String) -> Result<String, St
     }
 }
 
+/// Tauri command that refines existing code based on natural language instructions
+///
+/// # Arguments
+/// * `api_key` - OpenAI API key for authentication
+/// * `current_code` - The existing HTML/Tailwind code to refine
+/// * `instruction` - Natural language instruction for how to modify the code
+///
+/// # Returns
+/// * `Ok(String)` - Refined HTML/Tailwind CSS code
+/// * `Err(String)` - Error message if request fails
+#[tauri::command]
+async fn refine_code(api_key: String, current_code: String, instruction: String) -> Result<String, String> {
+    let client = reqwest::Client::new();
+    let response = client
+        .post("https://api.openai.com/v1/chat/completions")
+        .header("Authorization", format!("Bearer {}", api_key))
+        .json(&serde_json::json!({
+            "model": "gpt-5.1",
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "You are an expert at modifying HTML and Tailwind CSS code based on user instructions. Your response should be only the modified code, with no explanations or extra text. Make the requested changes while preserving the overall structure and quality of the code."
+                },
+                {
+                    "role": "user",
+                    "content": format!(
+                        "Here is the current HTML/Tailwind code:\n\n{}\n\nPlease modify this code based on the following instruction: {}\n\nReturn only the modified HTML code, no explanations.",
+                        current_code,
+                        instruction
+                    )
+                }
+            ]
+        }))
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if response.status().is_success() {
+        let completion: serde_json::Value = response.json().await.map_err(|e| e.to_string())?;
+        let content = completion["choices"][0]["message"]["content"]
+            .as_str()
+            .unwrap_or("")
+            .to_string();
+        Ok(content)
+    } else {
+        let error_body = response.text().await.map_err(|e| e.to_string())?;
+        Err(format!("Request failed with status: {}", error_body))
+    }
+}
+
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -100,7 +150,7 @@ pub fn run() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![greet, generate_code])
+        .invoke_handler(tauri::generate_handler![greet, generate_code, refine_code])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

@@ -23,6 +23,8 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"code" | "preview">("code");
   const [copied, setCopied] = useState(false);
+  const [refinementInstruction, setRefinementInstruction] = useState("");
+  const [isRefining, setIsRefining] = useState(false);
 
   /**
    * Remove markdown code fences from GPT response
@@ -89,6 +91,51 @@ ${code}
       setError(error instanceof Error ? error.message : String(error));
     } finally {
       setLoading(false);
+    }
+  };
+
+  /**
+   * Refine existing code with natural language instructions
+   * Sends current code + instruction to GPT for modification
+   */
+  const refineCode = async () => {
+    if (!apiKey) {
+      setError("Please enter your OpenAI API key in settings");
+      setShowSettings(true);
+      return;
+    }
+
+    if (!refinementInstruction.trim()) {
+      setError("Please enter refinement instructions");
+      return;
+    }
+
+    if (!generatedCode) {
+      setError("No code to refine");
+      return;
+    }
+
+    console.log("Starting code refinement...");
+    setIsRefining(true);
+    setError(null);
+
+    try {
+      console.log("Invoking Tauri refine_code command...");
+      const refinedCode = await invoke("refine_code", {
+        apiKey,
+        currentCode: generatedCode,
+        instruction: refinementInstruction,
+      });
+      console.log("Code refined successfully, length:", (refinedCode as string).length);
+      const cleanedCode = cleanCodeResponse(refinedCode as string);
+      setGeneratedCode(cleanedCode);
+      setRefinementInstruction(""); // Clear the instruction after success
+      setActiveTab("preview"); // Auto-switch to preview to show the result
+    } catch (error) {
+      console.error("Error refining code:", error);
+      setError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setIsRefining(false);
     }
   };
 
@@ -358,6 +405,45 @@ ${code}
                   )}
                 </div>
               </div>
+            </div>
+
+            {/* Refinement Section */}
+            <div className="border border-zinc-800 rounded-lg p-4 bg-zinc-900">
+              <label className="block text-sm font-medium mb-2 text-zinc-300">
+                Refine with AI
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="E.g., 'Make it responsive', 'Add dark mode', 'Use CSS Grid instead'..."
+                  className="flex-1 bg-zinc-950 border border-zinc-700 rounded-md px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-zinc-500"
+                  value={refinementInstruction}
+                  onChange={(e) => setRefinementInstruction(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !isRefining) {
+                      refineCode();
+                    }
+                  }}
+                  disabled={isRefining}
+                />
+                <button
+                  onClick={refineCode}
+                  disabled={isRefining || !refinementInstruction.trim()}
+                  className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-700 disabled:cursor-not-allowed text-white rounded-md transition-colors text-sm font-medium flex items-center gap-2"
+                >
+                  {isRefining ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Refining...
+                    </>
+                  ) : (
+                    "Refine"
+                  )}
+                </button>
+              </div>
+              <p className="text-xs text-zinc-500 mt-2">
+                Describe changes you want to make to the code. Press Enter or click Refine.
+              </p>
             </div>
           </div>
         ) : pastedImage ? (
