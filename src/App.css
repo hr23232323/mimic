@@ -1,11 +1,10 @@
 @import "tailwindcss";
 
-/* Syntax highlighter overrides for better readability */
-pre[class*="language-"] {
-  margin: 0 !important;
+/* CodeMirror custom styles */
+.cm-editor {
+  outline: none !important;
 }
 
-code[class*="language-"] {
+.cm-scroller {
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
-  line-height: 1.6;
 }

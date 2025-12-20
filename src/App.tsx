@@ -8,8 +8,9 @@ import { useState, useEffect } from "react";
 import { Settings, Copy, RefreshCw, HelpCircle } from "lucide-react";
 import { Store } from "@tauri-apps/plugin-store";
 import { invoke } from "@tauri-apps/api/core";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
+import CodeMirror from "@uiw/react-codemirror";
+import { html } from "@codemirror/lang-html";
+import { vscodeDark } from "@uiw/codemirror-theme-vscode";
 
 function App() {
   const [store, setStore] = useState<Store | null>(null);
@@ -324,26 +325,29 @@ ${code}
                 {/* Tab Content */}
                 <div className="overflow-auto bg-zinc-950 h-[380px]">
                   {activeTab === "code" ? (
-                    <SyntaxHighlighter
-                      language="html"
-                      style={vscDarkPlus}
-                      showLineNumbers={true}
-                      customStyle={{
-                        margin: 0,
-                        padding: "1rem",
-                        background: "#09090b",
-                        fontSize: "0.875rem",
+                    <CodeMirror
+                      value={generatedCode}
+                      height="380px"
+                      theme={vscodeDark}
+                      extensions={[html()]}
+                      onChange={(value) => setGeneratedCode(value)}
+                      basicSetup={{
+                        lineNumbers: true,
+                        highlightActiveLineGutter: true,
+                        highlightActiveLine: true,
+                        foldGutter: true,
+                        dropCursor: true,
+                        indentOnInput: true,
+                        bracketMatching: true,
+                        closeBrackets: true,
+                        autocompletion: true,
+                        highlightSelectionMatches: true,
+                      }}
+                      style={{
+                        fontSize: "14px",
                         height: "100%",
                       }}
-                      lineNumberStyle={{
-                        minWidth: "3em",
-                        paddingRight: "1em",
-                        color: "#71717a",
-                        userSelect: "none",
-                      }}
-                    >
-                      {generatedCode}
-                    </SyntaxHighlighter>
+                    />
                   ) : (
                     <iframe
                       srcDoc={getPreviewHTML(generatedCode)}
