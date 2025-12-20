@@ -8,3 +8,21 @@
 .cm-scroller {
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
 }
+
+/* Floating ghost animation */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.ghost-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.ghost-float:hover {
+  animation-play-state: paused;
+}

@@ -5,12 +5,13 @@
  */
 
 import { useState, useEffect } from "react";
-import { Settings, Copy, RefreshCw, HelpCircle } from "lucide-react";
+import { Settings, Copy, RefreshCw, HelpCircle, X } from "lucide-react";
 import { Store } from "@tauri-apps/plugin-store";
 import { invoke } from "@tauri-apps/api/core";
 import CodeMirror from "@uiw/react-codemirror";
 import { html } from "@codemirror/lang-html";
 import { vscodeDark } from "@uiw/codemirror-theme-vscode";
+import { GhostIcon } from "./GhostIcon";
 
 function App() {
   const [store, setStore] = useState<Store | null>(null);
@@ -25,6 +26,7 @@ function App() {
   const [copied, setCopied] = useState(false);
   const [refinementInstruction, setRefinementInstruction] = useState("");
   const [isRefining, setIsRefining] = useState(false);
+  const [showRefinementDialog, setShowRefinementDialog] = useState(false);
 
   /**
    * Remove markdown code fences from GPT response
@@ -130,6 +132,7 @@ ${code}
       const cleanedCode = cleanCodeResponse(refinedCode as string);
       setGeneratedCode(cleanedCode);
       setRefinementInstruction(""); // Clear the instruction after success
+      setShowRefinementDialog(false); // Close the dialog
       setActiveTab("preview"); // Auto-switch to preview to show the result
     } catch (error) {
       console.error("Error refining code:", error);
@@ -145,6 +148,20 @@ ${code}
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pastedImage]);
+
+  /**
+   * Close refinement dialog on ESC key press
+   */
+  useEffect(() => {
+    const handleEscKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && showRefinementDialog) {
+        setShowRefinementDialog(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleEscKey);
+    return () => window.removeEventListener("keydown", handleEscKey);
+  }, [showRefinementDialog]);
 
   /**
    * Setup effect: Load stored API key and register global paste/drop event listeners
@@ -238,7 +255,10 @@ ${code}
     >
       <div className="w-full max-w-7xl">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">👻 Mimic</h1>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <GhostIcon className="w-7 h-7" />
+            Mimic
+          </h1>
           <div className="flex items-center gap-2">
             {generatedCode && (
               <button
@@ -407,44 +427,105 @@ ${code}
               </div>
             </div>
 
-            {/* Refinement Section */}
-            <div className="border border-zinc-800 rounded-lg p-4 bg-zinc-900">
-              <label className="block text-sm font-medium mb-2 text-zinc-300">
-                Refine with AI
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="E.g., 'Make it responsive', 'Add dark mode', 'Use CSS Grid instead'..."
-                  className="flex-1 bg-zinc-950 border border-zinc-700 rounded-md px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder:text-zinc-500"
-                  value={refinementInstruction}
-                  onChange={(e) => setRefinementInstruction(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !isRefining) {
-                      refineCode();
-                    }
-                  }}
-                  disabled={isRefining}
+            {/* Floating AI Assistant Button */}
+            <button
+              onClick={() => setShowRefinementDialog(true)}
+              className="fixed bottom-8 right-8 w-16 h-16 text-white hover:scale-110 transition-all duration-200 flex items-center justify-center group filter drop-shadow-lg hover:drop-shadow-2xl ghost-float cursor-pointer"
+              title="AI Assistant - Refine your code"
+            >
+              <GhostIcon className="w-full h-full" />
+            </button>
+
+            {/* AI Chat Popup */}
+            {showRefinementDialog && (
+              <>
+                {/* Backdrop (subtle) */}
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setShowRefinementDialog(false)}
                 />
-                <button
-                  onClick={refineCode}
-                  disabled={isRefining || !refinementInstruction.trim()}
-                  className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-700 disabled:cursor-not-allowed text-white rounded-md transition-colors text-sm font-medium flex items-center gap-2"
-                >
-                  {isRefining ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      Refining...
-                    </>
-                  ) : (
-                    "Refine"
-                  )}
-                </button>
-              </div>
-              <p className="text-xs text-zinc-500 mt-2">
-                Describe changes you want to make to the code. Press Enter or click Refine.
-              </p>
-            </div>
+
+                {/* Chat Bubble */}
+                <div className="fixed bottom-28 right-8 z-50 w-96 bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl animate-in slide-in-from-bottom-4 duration-200">
+                  {/* Header */}
+                  <div className="flex items-center justify-between p-4 border-b border-zinc-800">
+                    <div className="flex items-center gap-3">
+                      <GhostIcon className="w-7 h-7 text-white" />
+                      <h3 className="text-sm font-semibold">mimic ghost</h3>
+                    </div>
+                    <button
+                      onClick={() => setShowRefinementDialog(false)}
+                      className="p-1 hover:bg-zinc-800 rounded-lg transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* Chat Content */}
+                  <div className="p-4 space-y-3">
+                    <p className="text-sm text-zinc-400">
+                      What should I change?
+                    </p>
+
+                    <input
+                      type="text"
+                      placeholder="make it responsive, add dark mode, etc..."
+                      className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 placeholder:text-zinc-600"
+                      value={refinementInstruction}
+                      onChange={(e) => setRefinementInstruction(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !isRefining) {
+                          refineCode();
+                        }
+                      }}
+                      disabled={isRefining}
+                      autoFocus
+                    />
+
+                    {/* Quick Chips */}
+                    <div className="space-y-1.5">
+                      <p className="text-xs text-zinc-600">Try these:</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {[
+                          "make responsive",
+                          "add dark mode",
+                          "use grid",
+                          "add animations",
+                        ].map((example) => (
+                          <button
+                            key={example}
+                            onClick={() => setRefinementInstruction(example)}
+                            className="px-2.5 py-1 bg-zinc-800/60 hover:bg-zinc-800 text-xs rounded-full transition-colors"
+                            disabled={isRefining}
+                          >
+                            {example}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Send Button */}
+                    <button
+                      onClick={refineCode}
+                      disabled={isRefining || !refinementInstruction.trim()}
+                      className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-700 disabled:cursor-not-allowed text-white rounded-lg transition-all text-sm font-medium flex items-center justify-center gap-2"
+                    >
+                      {isRefining ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          doing the thing...
+                        </>
+                      ) : (
+                        <>
+                          <GhostIcon className="w-4 h-4" />
+                          ship it
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         ) : pastedImage ? (
           <div className="space-y-4">
