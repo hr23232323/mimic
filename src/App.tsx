@@ -8,6 +8,8 @@ import { useState, useEffect } from "react";
 import { Settings, Copy, RefreshCw, HelpCircle } from "lucide-react";
 import { Store } from "@tauri-apps/plugin-store";
 import { invoke } from "@tauri-apps/api/core";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 
 function App() {
   const [store, setStore] = useState<Store | null>(null);
@@ -322,9 +324,26 @@ ${code}
                 {/* Tab Content */}
                 <div className="overflow-auto bg-zinc-950 h-[380px]">
                   {activeTab === "code" ? (
-                    <pre className="p-4 text-sm">
-                      <code className="text-zinc-100">{generatedCode}</code>
-                    </pre>
+                    <SyntaxHighlighter
+                      language="html"
+                      style={vscDarkPlus}
+                      showLineNumbers={true}
+                      customStyle={{
+                        margin: 0,
+                        padding: "1rem",
+                        background: "#09090b",
+                        fontSize: "0.875rem",
+                        height: "100%",
+                      }}
+                      lineNumberStyle={{
+                        minWidth: "3em",
+                        paddingRight: "1em",
+                        color: "#71717a",
+                        userSelect: "none",
+                      }}
+                    >
+                      {generatedCode}
+                    </SyntaxHighlighter>
                   ) : (
                     <iframe
                       srcDoc={getPreviewHTML(generatedCode)}

@@ -1,12 +1,11 @@
 @import "tailwindcss";
 
-pre {
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
-  line-height: 1.5;
+/* Syntax highlighter overrides for better readability */
+pre[class*="language-"] {
+  margin: 0 !important;
 }
 
-code {
+code[class*="language-"] {
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
+  line-height: 1.6;
 }
