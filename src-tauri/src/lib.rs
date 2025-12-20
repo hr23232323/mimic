@@ -1,5 +1,5 @@
 use tauri::Manager;
-use tauri::tray::{MouseButton, TrayIconBuilder, TrayIconEvent};
+use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 
 /// Tauri command that sends a screenshot to OpenAI's API and receives generated HTML/Tailwind code
 ///
@@ -73,15 +73,25 @@ pub fn run() {
             let _tray = TrayIconBuilder::new()
                 .icon(handle.default_window_icon().cloned().unwrap())
                 .on_tray_icon_event(move |_tray, event| {
-                    if let TrayIconEvent::Click { button, .. } = event {
-                        if button == MouseButton::Left {
-                            if let Some(window) = handle.get_webview_window("main") {
-                                if window.is_visible().unwrap() {
-                                    window.hide().unwrap();
-                                } else {
-                                    window.show().unwrap();
-                                    window.set_focus().unwrap();
-                                }
+                    if let TrayIconEvent::Click {
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Up,
+                        ..
+                    } = event
+                    {
+                        if let Some(window) = handle.get_webview_window("main") {
+                            // Check if window is visible and not minimized
+                            let is_visible = window.is_visible().unwrap_or(false);
+                            let is_minimized = window.is_minimized().unwrap_or(false);
+
+                            if is_visible && !is_minimized {
+                                // Window is visible and not minimized, so hide it
+                                let _ = window.hide();
+                            } else {
+                                // Window is hidden or minimized, so show and focus it
+                                let _ = window.unminimize();
+                                let _ = window.show();
+                                let _ = window.set_focus();
                             }
                         }
                     }
