@@ -723,16 +723,29 @@ ${code}
                     </div>
                   ) : (
                     <div className="p-4 bg-zinc-950 h-[380px] flex items-center justify-center">
-                      <iframe
-                        srcDoc={getPreviewHTML(generatedCode)}
-                        className="border-0 bg-white max-w-full max-h-full"
-                        title="Preview"
-                        sandbox="allow-scripts allow-same-origin"
-                        style={{
-                          width: `${imageWidth}px`,
-                          height: `${imageHeight}px`
-                        }}
-                      />
+                      <div className="relative" style={{
+                        width: `${imageWidth}px`,
+                        height: `${imageHeight}px`,
+                        maxWidth: '100%',
+                        maxHeight: '100%',
+                      }}>
+                        {/* Device Frame */}
+                        <div className="absolute inset-0 rounded-xl border-[8px] border-zinc-800 shadow-2xl pointer-events-none" />
+
+                        {/* Browser Chrome */}
+                        <div className="absolute top-2 left-2 right-2 h-6 bg-zinc-900 rounded-t-lg flex items-center px-2 gap-1.5 pointer-events-none z-10">
+                          <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
+                          <div className="w-2.5 h-2.5 rounded-full bg-yellow-500" />
+                          <div className="w-2.5 h-2.5 rounded-full bg-green-500" />
+                        </div>
+
+                        <iframe
+                          srcDoc={getPreviewHTML(generatedCode)}
+                          className="w-full h-full border-0 bg-white rounded-lg"
+                          title="Preview"
+                          sandbox="allow-scripts allow-same-origin"
+                        />
+                      </div>
                     </div>
                   )}
                 </div>
