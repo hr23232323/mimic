@@ -1,12 +1,35 @@
 # 👻 Mimic
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![GitHub release](https://img.shields.io/github/v/release/yourusername/mimic-desktop)](https://github.com/yourusername/mimic-desktop/releases)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+
 **Your UI is ready. You just haven't pasted it yet.**
 
-Mimic is a tiny desktop app that lives in the background. Paste a screenshot, get the Tailwind CSS code. That's it.
+Mimic is a tiny desktop app that lives in your menu bar. Paste a screenshot, get Tailwind CSS code. That's it.
 
-Built with **Tauri v2**, **Rust**, and **GPT-4o**.
+Built with **Tauri v2**, **Rust**, and **GPT-5.1**.
 
-![Demo](https://via.placeholder.com/800x400?text=Add+your+demo+GIF+here)
+---
+
+## 🚀 Quick Start
+
+### Download (Easiest)
+**[⬇️ Download Latest Release](https://github.com/yourusername/mimic-desktop/releases/latest)**
+
+Pick your platform:
+- **macOS**: Download `.dmg` → Drag to Applications
+- **Windows**: Download `.msi` → Run installer
+- **Linux**: Download `.AppImage` → Make executable & run
+
+### Or Build from Source
+See [Install](#install) section below.
+
+### First Time Setup
+1. Open Mimic from menu bar (👻 ghost icon)
+2. Click Settings → Add your OpenAI API key
+3. Paste a screenshot (`Cmd+V`)
+4. Watch the magic happen ✨
 
 ---
 
@@ -21,13 +44,17 @@ So I built this. It sits in your menu bar. You paste a screenshot. It gives you 
 
 ---
 
-## Features
+## ✨ Features
 
-- **Invisible** — Lives in your menu bar, uses ~0% resources when idle
-- **Paste & Go** — `Cmd+V` (or drag-drop) any screenshot
-- **Live Preview** — See the generated UI rendered instantly
-- **One-Click Copy** — Grab the code and ship it
-- **Rust Fast** — Tauri v2 means native performance, tiny binary
+- 🎯 **Invisible** — Lives in your menu bar, uses ~0% resources when idle
+- 📋 **Paste & Go** — `Cmd+V` (or drag-drop) any screenshot
+- 👁️ **Live Preview** — See the generated UI with device frames
+- 📱 **Device Previews** — Test on mobile (390x844) and desktop (1080x675) windows
+- 🤖 **AI Refinement** — Chat with the ghost to modify your code ("make it responsive")
+- 📚 **Generation History** — Auto-saves last 30 generations with thumbnails
+- 📝 **Code Editor** — Syntax-highlighted HTML editor with live updates
+- 🚀 **Rust Fast** — Tauri v2 means native performance, tiny binary (~10MB)
+- 🔒 **Privacy-First** — Everything stored locally, no tracking
 
 ---
 
@@ -55,15 +82,18 @@ Outputs will be in `src-tauri/target/release/bundle/`.
 
 ---
 
-## How It Works
+## 🔧 How It Works
 
-1. You paste a screenshot
-2. It sends the image to GPT-4o (Vision API)
-3. GPT generates clean HTML with Tailwind classes
-4. You get a split view: original screenshot vs. generated code
-5. Toggle to live preview, copy the code, done
+1. **Paste** a screenshot (or drag-drop)
+2. **AI generates** HTML + Tailwind code via GPT-5.1 Vision API
+3. **Preview** the generated UI with device frames
+4. **Refine** using natural language ("make it responsive")
+5. **Test** on mobile/desktop preview windows
+6. **Copy** the code and ship it
 
 No cloud storage. No tracking. Your API key stays on your machine.
+
+All generations auto-saved locally for easy access.
 
 ---
 
@@ -89,18 +119,22 @@ No cloud storage. No tracking. Your API key stays on your machine.
 
 ---
 
-## Contributing
+## 🤝 Contributing
 
-This was vibe-coded in a weekend. It's messy. It works.
+Built over a weekend with passion. It works, it's fast, and it's ready for your ideas.
 
-PRs welcome! Specifically looking for:
+**High-priority features:**
 - [ ] Claude 3.5 Sonnet support
-- [ ] Better code formatting/syntax highlighting
-- [ ] History/save previous generations
-- [ ] Export as React/Vue components
+- [ ] Export as React/Vue/Svelte components
 - [ ] Batch processing multiple screenshots
+- [ ] Custom Tailwind config support
+- [ ] Dark mode for generated code
+- [ ] Keyboard shortcuts
+- [ ] Homebrew cask formula
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and guidelines.
+
+**Found a bug?** [Open an issue](https://github.com/yourusername/mimic-desktop/issues/new/choose)
 
 ---
 
@@ -121,12 +155,23 @@ MIT — do whatever you want with it.
 
 ---
 
-## Acknowledgments
+## 🙏 Acknowledgments
 
 Built with [Tauri](https://tauri.app/), [React](https://react.dev/), and [Tailwind CSS](https://tailwindcss.com/).
 
-Powered by OpenAI's GPT-4o.
+Powered by OpenAI's GPT-5.1.
 
 ---
 
-**Note:** You need an OpenAI API key. Usage is billed by OpenAI at their standard rates.
+## 📦 Distribution
+
+**Pre-built Binaries:** Available in [GitHub Releases](https://github.com/yourusername/mimic-desktop/releases)
+
+**Homebrew (coming soon):**
+```bash
+brew install --cask mimic
+```
+
+---
+
+**Note:** You need an OpenAI API key. Usage is billed by OpenAI at their standard rates (~$0.01-0.05 per screenshot).
