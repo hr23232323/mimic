@@ -41,6 +41,21 @@ function App() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [currentGenerationId, setCurrentGenerationId] = useState<string | null>(null);
+  const [imageWidth, setImageWidth] = useState<number>(380);
+  const [imageHeight, setImageHeight] = useState<number>(380);
+
+  /**
+   * Calculate aspect ratio from an image
+   */
+  const setImageDimensions = (imageUrl: string) => {
+    const img = new Image();
+    img.onload = () => {
+      setImageHeight(img.height);
+      setImageWidth(img.width);
+
+    };
+    img.src = imageUrl;
+  };
 
   /**
    * Remove markdown code fences from GPT response
@@ -221,6 +236,7 @@ ${code}
         reader.onload = (e) => {
           const base64 = e.target?.result as string;
           setPastedImage(base64);
+          setImageDimensions(base64);
         };
         reader.readAsDataURL(file);
       }
@@ -242,6 +258,7 @@ ${code}
                 const base64 = e.target?.result as string;
                 console.log("Image loaded as base64, length:", base64.length);
                 setPastedImage(base64);
+                setImageDimensions(base64);
               };
               reader.readAsDataURL(file);
             }
@@ -315,7 +332,7 @@ ${code}
     const mobileWindow = new WebviewWindow(`mobile-preview-${Date.now()}`, {
       url: dataUrl,
       title: 'Mobile Preview',
-      width: 390,
+      width: 420,
       height: 844,
       resizable: true,
       center: true,
@@ -424,6 +441,7 @@ ${code}
     setActiveTab("preview");
     setShowHistory(false);
     setCurrentGenerationId(item.id);
+    setImageDimensions(item.image);
   };
 
   /**
@@ -676,38 +694,46 @@ ${code}
                 </div>
 
                 {/* Tab Content */}
-                <div className="overflow-auto bg-zinc-950 h-[380px]">
+                <div className="bg-zinc-950 h-[380px] flex items-center justify-center">
                   {activeTab === "code" ? (
-                    <CodeMirror
-                      value={generatedCode}
-                      height="380px"
-                      theme={vscodeDark}
-                      extensions={[html()]}
-                      onChange={(value) => setGeneratedCode(value)}
-                      basicSetup={{
-                        lineNumbers: true,
-                        highlightActiveLineGutter: true,
-                        highlightActiveLine: true,
-                        foldGutter: true,
-                        dropCursor: true,
-                        indentOnInput: true,
-                        bracketMatching: true,
-                        closeBrackets: true,
-                        autocompletion: true,
-                        highlightSelectionMatches: true,
-                      }}
-                      style={{
-                        fontSize: "14px",
-                        height: "100%",
-                      }}
-                    />
+                    <div className="w-full h-full overflow-auto">
+                      <CodeMirror
+                        value={generatedCode}
+                        height="380px"
+                        theme={vscodeDark}
+                        extensions={[html()]}
+                        onChange={(value) => setGeneratedCode(value)}
+                        basicSetup={{
+                          lineNumbers: true,
+                          highlightActiveLineGutter: true,
+                          highlightActiveLine: true,
+                          foldGutter: true,
+                          dropCursor: true,
+                          indentOnInput: true,
+                          bracketMatching: true,
+                          closeBrackets: true,
+                          autocompletion: true,
+                          highlightSelectionMatches: true,
+                        }}
+                        style={{
+                          fontSize: "14px",
+                          height: "100%",
+                        }}
+                      />
+                    </div>
                   ) : (
-                    <iframe
-                      srcDoc={getPreviewHTML(generatedCode)}
-                      className="w-full h-full border-0 bg-white"
-                      title="Preview"
-                      sandbox="allow-scripts allow-same-origin"
-                    />
+                    <div className="p-4 bg-zinc-950 h-[380px] flex items-center justify-center">
+                      <iframe
+                        srcDoc={getPreviewHTML(generatedCode)}
+                        className="border-0 bg-white max-w-full max-h-full"
+                        title="Preview"
+                        sandbox="allow-scripts allow-same-origin"
+                        style={{
+                          width: `${imageWidth}px`,
+                          height: `${imageHeight}px`
+                        }}
+                      />
+                    </div>
                   )}
                 </div>
               </div>
