@@ -8,6 +8,12 @@
     "opener:default",
     "store:default",
     "store:allow-get",
-    "store:allow-set"
+    "store:allow-set",
+    "core:webview:allow-create-webview-window",
+    "core:webview:allow-webview-position",
+    "core:webview:allow-webview-size",
+    "core:event:allow-emit",
+    "core:event:allow-emit-to",
+    "core:event:allow-listen"
   ]
 }

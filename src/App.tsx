@@ -5,13 +5,24 @@
  */
 
 import { useState, useEffect } from "react";
-import { Settings, Copy, RefreshCw, HelpCircle, X } from "lucide-react";
+import { Settings, Copy, RefreshCw, HelpCircle, X, History, Trash2, Monitor, Smartphone } from "lucide-react";
 import { Store } from "@tauri-apps/plugin-store";
 import { invoke } from "@tauri-apps/api/core";
+import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
+import { emitTo } from "@tauri-apps/api/event";
 import CodeMirror from "@uiw/react-codemirror";
 import { html } from "@codemirror/lang-html";
 import { vscodeDark } from "@uiw/codemirror-theme-vscode";
 import { GhostIcon } from "./GhostIcon";
+
+interface HistoryItem {
+  id: string;
+  timestamp: number;
+  image: string;
+  code: string;
+  parentId?: string; // For tracking refinements of the same generation
+  isRefinement?: boolean;
+}
 
 function App() {
   const [store, setStore] = useState<Store | null>(null);
@@ -27,6 +38,9 @@ function App() {
   const [refinementInstruction, setRefinementInstruction] = useState("");
   const [isRefining, setIsRefining] = useState(false);
   const [showRefinementDialog, setShowRefinementDialog] = useState(false);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const [currentGenerationId, setCurrentGenerationId] = useState<string | null>(null);
 
   /**
    * Remove markdown code fences from GPT response
@@ -88,6 +102,10 @@ ${code}
       const cleanedCode = cleanCodeResponse(code as string);
       setGeneratedCode(cleanedCode);
       setActiveTab("preview"); // Auto-switch to preview to show the result
+
+      // Save to history and track generation ID
+      const generationId = await saveToHistory(base64, cleanedCode);
+      setCurrentGenerationId(generationId);
     } catch (error) {
       console.error("Error generating code:", error);
       setError(error instanceof Error ? error.message : String(error));
@@ -134,6 +152,17 @@ ${code}
       setRefinementInstruction(""); // Clear the instruction after success
       setShowRefinementDialog(false); // Close the dialog
       setActiveTab("preview"); // Auto-switch to preview to show the result
+
+      // Save refinement to history
+      if (pastedImage) {
+        const refinementId = await saveToHistory(
+          pastedImage,
+          cleanedCode,
+          currentGenerationId || undefined,
+          true
+        );
+        setCurrentGenerationId(refinementId);
+      }
     } catch (error) {
       console.error("Error refining code:", error);
       setError(error instanceof Error ? error.message : String(error));
@@ -173,6 +202,11 @@ ${code}
       const storedApiKey = await store.get<string>("apiKey");
       if (storedApiKey) {
         setApiKey(storedApiKey);
+      }
+      // Load history
+      const savedHistory = await store.get<HistoryItem[]>("history");
+      if (savedHistory) {
+        setHistory(savedHistory);
       }
     };
     loadStore();
@@ -246,7 +280,160 @@ ${code}
     setPastedImage(null);
     setGeneratedCode("");
     setError(null);
+    setLoading(false); // Ensure loading state is cleared
+    setIsRefining(false); // Clear refinement state too
     setActiveTab("code");
+    setCurrentGenerationId(null);
+    setRefinementInstruction(""); // Clear any pending instructions
+    setShowRefinementDialog(false); // Close refinement dialog
+  };
+
+  const openMobilePreview = async () => {
+    if (!generatedCode) {
+      setError('No code to preview');
+      return;
+    }
+
+    // Create a complete HTML document with the generated code
+    const previewHTML = `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Mobile Preview</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+      </head>
+      <body>
+        ${generatedCode}
+      </body>
+      </html>
+    `;
+
+    const dataUrl = `data:text/html,${encodeURIComponent(previewHTML)}`;
+
+    const mobileWindow = new WebviewWindow(`mobile-preview-${Date.now()}`, {
+      url: dataUrl,
+      title: 'Mobile Preview',
+      width: 390,
+      height: 844,
+      resizable: true,
+      center: true,
+    });
+
+    mobileWindow.once('tauri://created', () => {
+      console.log('Mobile preview window opened successfully!');
+    });
+
+    mobileWindow.once('tauri://error', (e) => {
+      console.error('Error opening mobile preview window:', e);
+      setError('Failed to open mobile preview window');
+    });
+  };
+
+  const openDesktopPreview = async () => {
+    if (!generatedCode) {
+      setError('No code to preview');
+      return;
+    }
+
+    // Create a complete HTML document with the generated code
+    const previewHTML = `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Desktop Preview</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+      </head>
+      <body>
+        ${generatedCode}
+      </body>
+      </html>
+    `;
+
+    const dataUrl = `data:text/html,${encodeURIComponent(previewHTML)}`;
+
+    const desktopWindow = new WebviewWindow(`desktop-preview-${Date.now()}`, {
+      url: dataUrl,
+      title: 'Desktop Preview',
+      width: 1080,
+      height: 675,
+      resizable: true,
+      center: true,
+    });
+
+    desktopWindow.once('tauri://created', () => {
+      console.log('Desktop preview window opened successfully!');
+    });
+
+    desktopWindow.once('tauri://error', (e) => {
+      console.error('Error opening desktop preview window:', e);
+      setError('Failed to open desktop preview window');
+    });
+  };
+
+  /**
+   * Save a generation to history
+   */
+  const saveToHistory = async (
+    image: string,
+    code: string,
+    parentId?: string,
+    isRefinement = false
+  ): Promise<string> => {
+    if (!store) return Date.now().toString();
+
+    const newItem: HistoryItem = {
+      id: Date.now().toString(),
+      timestamp: Date.now(),
+      image,
+      code,
+      parentId,
+      isRefinement,
+    };
+
+    setHistory((prevHistory) => {
+      const updatedHistory = [newItem, ...prevHistory].slice(0, 30); // Keep last 30 (more room for refinements)
+      store.set("history", updatedHistory);
+      store.save();
+      return updatedHistory;
+    });
+
+    return newItem.id;
+  };
+
+  /**
+   * Load history from store
+   */
+  const loadHistory = async () => {
+    if (!store) return;
+    const savedHistory = await store.get<HistoryItem[]>("history");
+    if (savedHistory) {
+      setHistory(savedHistory);
+    }
+  };
+
+  /**
+   * Restore a generation from history
+   */
+  const restoreFromHistory = (item: HistoryItem) => {
+    setPastedImage(item.image);
+    setGeneratedCode(item.code);
+    setActiveTab("preview");
+    setShowHistory(false);
+    setCurrentGenerationId(item.id);
+  };
+
+  /**
+   * Clear all history
+   */
+  const clearHistory = async () => {
+    if (!store) return;
+    setHistory([]);
+    await store.set("history", []);
+    await store.save();
   };
 
   return (
@@ -260,15 +447,26 @@ ${code}
             Mimic
           </h1>
           <div className="flex items-center gap-2">
-            {generatedCode && (
+            {(generatedCode || pastedImage || loading) && (
               <button
                 onClick={handleTryAnother}
                 className="flex items-center gap-2 px-3 py-2 bg-zinc-800 hover:bg-zinc-700 rounded-md transition-colors text-sm"
+                title={loading ? "Cancel and reset" : "Try another screenshot"}
               >
                 <RefreshCw className="w-4 h-4" />
-                Try Another
+                {loading ? "Reset" : "Try Another"}
               </button>
             )}
+            <button
+              onClick={() => setShowHistory(!showHistory)}
+              className="p-2 hover:bg-zinc-800 rounded-md transition-colors relative"
+              title="History"
+            >
+              <History className="w-6 h-6" />
+              {history.length > 0 && (
+                <span className="absolute top-1 right-1 w-2 h-2 bg-blue-500 rounded-full"></span>
+              )}
+            </button>
             <button
               onClick={() => setShowHelp(!showHelp)}
               className="p-2 hover:bg-zinc-800 rounded-md transition-colors"
@@ -315,10 +513,77 @@ ${code}
           </div>
         )}
 
+        {showHistory && (
+          <div className="mb-6 p-4 bg-zinc-900 border border-zinc-800 rounded-lg">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold">Generation History</h3>
+              {history.length > 0 && (
+                <button
+                  onClick={clearHistory}
+                  className="text-xs text-zinc-500 hover:text-red-400 transition-colors flex items-center gap-1"
+                >
+                  <Trash2 className="w-3 h-3" />
+                  Clear All
+                </button>
+              )}
+            </div>
+
+            {history.length === 0 ? (
+              <p className="text-sm text-zinc-500">No generations yet</p>
+            ) : (
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {history.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => restoreFromHistory(item)}
+                    className={`w-full p-3 bg-zinc-950 hover:bg-zinc-800 border rounded-md transition-colors text-left flex items-center gap-3 ${
+                      item.isRefinement
+                        ? "border-blue-900 ml-4"
+                        : "border-zinc-800"
+                    }`}
+                  >
+                    <img
+                      src={item.image}
+                      alt="Thumbnail"
+                      className="w-16 h-16 object-cover rounded border border-zinc-700"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        {item.isRefinement && (
+                          <RefreshCw className="w-3 h-3 text-blue-400" />
+                        )}
+                        <p className="text-xs text-zinc-500">
+                          {new Date(item.timestamp).toLocaleString()}
+                        </p>
+                      </div>
+                      <p className="text-sm text-zinc-300 truncate mt-1">
+                        {item.code.substring(0, 60)}...
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {error && (
-          <div className="mb-4 p-4 bg-red-900/20 border border-red-800 rounded-md text-red-400">
+          <div className="mb-4 p-4 bg-red-900/20 border border-red-800 rounded-md text-red-400 relative">
+            <button
+              onClick={() => setError(null)}
+              className="absolute top-2 right-2 p-1 hover:bg-red-800/30 rounded transition-colors"
+              title="Dismiss error"
+            >
+              <X className="w-4 h-4" />
+            </button>
             <p className="font-semibold">Error:</p>
-            <p>{error}</p>
+            <p className="pr-8">{error}</p>
+            <button
+              onClick={handleTryAnother}
+              className="mt-3 px-3 py-1.5 bg-red-800/40 hover:bg-red-800/60 rounded text-sm transition-colors"
+            >
+              Start Over
+            </button>
           </div>
         )}
 
@@ -327,6 +592,7 @@ ${code}
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
             <p className="text-lg">Generating code from screenshot...</p>
             <p className="text-sm text-zinc-500">This may take a few moments</p>
+            <p className="text-xs text-zinc-600 mt-2">Stuck? Click the "Reset" button above</p>
           </div>
         ) : generatedCode ? (
           <div className="space-y-4">
@@ -374,19 +640,39 @@ ${code}
                       Preview
                     </button>
                   </div>
-                  {activeTab === "code" && (
-                    <button
-                      onClick={handleCopyCode}
-                      className="mr-3 p-1.5 hover:bg-zinc-800 rounded transition-colors"
-                      title="Copy code"
-                    >
-                      {copied ? (
-                        <span className="text-xs text-green-400 px-1">Copied!</span>
-                      ) : (
-                        <Copy className="w-4 h-4" />
-                      )}
-                    </button>
-                  )}
+                  <div className="flex items-center gap-2 mr-3">
+                    {activeTab === "preview" && generatedCode && (
+                      <>
+                        <button
+                          onClick={openMobilePreview}
+                          className="p-1.5 hover:bg-zinc-800 rounded transition-colors"
+                          title="Open mobile preview"
+                        >
+                          <Smartphone className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={openDesktopPreview}
+                          className="p-1.5 hover:bg-zinc-800 rounded transition-colors"
+                          title="Open desktop preview"
+                        >
+                          <Monitor className="w-4 h-4" />
+                        </button>
+                      </>
+                    )}
+                    {activeTab === "code" && generatedCode && (
+                      <button
+                        onClick={handleCopyCode}
+                        className="p-1.5 hover:bg-zinc-800 rounded transition-colors"
+                        title="Copy code"
+                      >
+                        {copied ? (
+                          <span className="text-xs text-green-400 px-1">Copied!</span>
+                        ) : (
+                          <Copy className="w-4 h-4" />
+                        )}
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {/* Tab Content */}
