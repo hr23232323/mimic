@@ -5,24 +5,14 @@
  */
 
 import { useState, useEffect } from "react";
-import { Settings, Copy, RefreshCw, HelpCircle, X, History, Trash2, Monitor, Smartphone } from "lucide-react";
+import { Settings, RefreshCw, HelpCircle, History, X } from "lucide-react";
 import { Store } from "@tauri-apps/plugin-store";
 import { invoke } from "@tauri-apps/api/core";
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
-import { emitTo } from "@tauri-apps/api/event";
-import CodeMirror from "@uiw/react-codemirror";
-import { html } from "@codemirror/lang-html";
-import { vscodeDark } from "@uiw/codemirror-theme-vscode";
 import { GhostIcon } from "./GhostIcon";
-
-interface HistoryItem {
-  id: string;
-  timestamp: number;
-  image: string;
-  code: string;
-  parentId?: string; // For tracking refinements of the same generation
-  isRefinement?: boolean;
-}
+import { HistoryPanel, type HistoryItem } from "./components/HistoryPanel";
+import { RefinementDialog } from "./components/RefinementDialog";
+import { PreviewPane } from "./components/PreviewPane";
 
 function App() {
   const [store, setStore] = useState<Store | null>(null);
@@ -532,57 +522,11 @@ ${code}
         )}
 
         {showHistory && (
-          <div className="mb-6 p-4 bg-zinc-900 border border-zinc-800 rounded-lg">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold">Generation History</h3>
-              {history.length > 0 && (
-                <button
-                  onClick={clearHistory}
-                  className="text-xs text-zinc-500 hover:text-red-400 transition-colors flex items-center gap-1"
-                >
-                  <Trash2 className="w-3 h-3" />
-                  Clear All
-                </button>
-              )}
-            </div>
-
-            {history.length === 0 ? (
-              <p className="text-sm text-zinc-500">No generations yet</p>
-            ) : (
-              <div className="space-y-2 max-h-96 overflow-y-auto">
-                {history.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => restoreFromHistory(item)}
-                    className={`w-full p-3 bg-zinc-950 hover:bg-zinc-800 border rounded-md transition-colors text-left flex items-center gap-3 ${
-                      item.isRefinement
-                        ? "border-blue-900 ml-4"
-                        : "border-zinc-800"
-                    }`}
-                  >
-                    <img
-                      src={item.image}
-                      alt="Thumbnail"
-                      className="w-16 h-16 object-cover rounded border border-zinc-700"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        {item.isRefinement && (
-                          <RefreshCw className="w-3 h-3 text-blue-400" />
-                        )}
-                        <p className="text-xs text-zinc-500">
-                          {new Date(item.timestamp).toLocaleString()}
-                        </p>
-                      </div>
-                      <p className="text-sm text-zinc-300 truncate mt-1">
-                        {item.code.substring(0, 60)}...
-                      </p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          <HistoryPanel
+            history={history}
+            onRestore={restoreFromHistory}
+            onClearAll={clearHistory}
+          />
         )}
 
         {error && (
@@ -633,123 +577,19 @@ ${code}
               </div>
 
               {/* Right: Code/Preview Tabs */}
-              <div className="border border-zinc-800 rounded-lg overflow-hidden flex flex-col">
-                {/* Tab Headers */}
-                <div className="bg-zinc-900 border-b border-zinc-800 flex items-center justify-between">
-                  <div className="flex">
-                    <button
-                      className={`px-4 py-2 text-sm font-semibold transition-colors ${
-                        activeTab === "code"
-                          ? "bg-zinc-950 text-white border-b-2 border-blue-500"
-                          : "text-zinc-400 hover:text-white"
-                      }`}
-                      onClick={() => setActiveTab("code")}
-                    >
-                      Code
-                    </button>
-                    <button
-                      className={`px-4 py-2 text-sm font-semibold transition-colors ${
-                        activeTab === "preview"
-                          ? "bg-zinc-950 text-white border-b-2 border-blue-500"
-                          : "text-zinc-400 hover:text-white"
-                      }`}
-                      onClick={() => setActiveTab("preview")}
-                    >
-                      Preview
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-2 mr-3">
-                    {activeTab === "preview" && generatedCode && (
-                      <>
-                        <button
-                          onClick={openMobilePreview}
-                          className="p-1.5 hover:bg-zinc-800 rounded transition-colors"
-                          title="Open mobile preview"
-                        >
-                          <Smartphone className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={openDesktopPreview}
-                          className="p-1.5 hover:bg-zinc-800 rounded transition-colors"
-                          title="Open desktop preview"
-                        >
-                          <Monitor className="w-4 h-4" />
-                        </button>
-                      </>
-                    )}
-                    {activeTab === "code" && generatedCode && (
-                      <button
-                        onClick={handleCopyCode}
-                        className="p-1.5 hover:bg-zinc-800 rounded transition-colors"
-                        title="Copy code"
-                      >
-                        {copied ? (
-                          <span className="text-xs text-green-400 px-1">Copied!</span>
-                        ) : (
-                          <Copy className="w-4 h-4" />
-                        )}
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Tab Content */}
-                <div className="bg-zinc-950 h-[380px] flex items-center justify-center">
-                  {activeTab === "code" ? (
-                    <div className="w-full h-full overflow-auto">
-                      <CodeMirror
-                        value={generatedCode}
-                        height="380px"
-                        theme={vscodeDark}
-                        extensions={[html()]}
-                        onChange={(value) => setGeneratedCode(value)}
-                        basicSetup={{
-                          lineNumbers: true,
-                          highlightActiveLineGutter: true,
-                          highlightActiveLine: true,
-                          foldGutter: true,
-                          dropCursor: true,
-                          indentOnInput: true,
-                          bracketMatching: true,
-                          closeBrackets: true,
-                          autocompletion: true,
-                          highlightSelectionMatches: true,
-                        }}
-                        style={{
-                          fontSize: "14px",
-                          height: "100%",
-                        }}
-                      />
-                    </div>
-                  ) : (
-                    <div className="p-4 bg-zinc-950 h-[380px] flex items-center justify-center">
-                      <div className="relative" style={{
-                        width: `${imageWidth}px`,
-                        height: `${imageHeight}px`,
-                        maxWidth: '100%',
-                        maxHeight: '100%',
-                      }}>
-                        {/* Device Frame */}
-                        <div className="absolute inset-0 rounded-xl border-[8px] border-zinc-800 shadow-2xl pointer-events-none" />
-
-                        {/* Browser Chrome */}
-                        <div className="absolute top-2 left-2 right-2 h-6 bg-zinc-900 rounded-t-lg flex items-center px-2 gap-1.5 pointer-events-none z-10">
-                          <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
-                          <div className="w-2.5 h-2.5 rounded-full bg-yellow-500" />
-                          <div className="w-2.5 h-2.5 rounded-full bg-green-500" />
-                        </div>
-
-                        <iframe
-                          srcDoc={getPreviewHTML(generatedCode)}
-                          className="w-full h-full border-0 bg-white rounded-lg"
-                          title="Preview"
-                          sandbox="allow-scripts allow-same-origin"
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
+              <PreviewPane
+                activeTab={activeTab}
+                generatedCode={generatedCode}
+                copied={copied}
+                imageWidth={imageWidth}
+                imageHeight={imageHeight}
+                onTabChange={setActiveTab}
+                onCodeChange={setGeneratedCode}
+                onCopy={handleCopyCode}
+                onOpenMobilePreview={openMobilePreview}
+                onOpenDesktopPreview={openDesktopPreview}
+                getPreviewHTML={getPreviewHTML}
+              />
             </div>
 
             {/* Floating AI Assistant Button */}
@@ -762,95 +602,14 @@ ${code}
             </button>
 
             {/* AI Chat Popup */}
-            {showRefinementDialog && (
-              <>
-                {/* Backdrop (subtle) */}
-                <div
-                  className="fixed inset-0 z-40"
-                  onClick={() => setShowRefinementDialog(false)}
-                />
-
-                {/* Chat Bubble */}
-                <div className="fixed bottom-28 right-8 z-50 w-96 bg-zinc-900 border border-zinc-700 rounded-2xl shadow-2xl animate-in slide-in-from-bottom-4 duration-200">
-                  {/* Header */}
-                  <div className="flex items-center justify-between p-4 border-b border-zinc-800">
-                    <div className="flex items-center gap-3">
-                      <GhostIcon className="w-7 h-7 text-white" />
-                      <h3 className="text-sm font-semibold">mimic ghost</h3>
-                    </div>
-                    <button
-                      onClick={() => setShowRefinementDialog(false)}
-                      className="p-1 hover:bg-zinc-800 rounded-lg transition-colors"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  {/* Chat Content */}
-                  <div className="p-4 space-y-3">
-                    <p className="text-sm text-zinc-400">
-                      What should I change?
-                    </p>
-
-                    <input
-                      type="text"
-                      placeholder="make it responsive, add dark mode, etc..."
-                      className="w-full bg-zinc-950 border border-zinc-700 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 placeholder:text-zinc-600"
-                      value={refinementInstruction}
-                      onChange={(e) => setRefinementInstruction(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && !isRefining) {
-                          refineCode();
-                        }
-                      }}
-                      disabled={isRefining}
-                      autoFocus
-                    />
-
-                    {/* Quick Chips */}
-                    <div className="space-y-1.5">
-                      <p className="text-xs text-zinc-600">Try these:</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {[
-                          "make responsive",
-                          "add dark mode",
-                          "use grid",
-                          "add animations",
-                        ].map((example) => (
-                          <button
-                            key={example}
-                            onClick={() => setRefinementInstruction(example)}
-                            className="px-2.5 py-1 bg-zinc-800/60 hover:bg-zinc-800 text-xs rounded-full transition-colors"
-                            disabled={isRefining}
-                          >
-                            {example}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Send Button */}
-                    <button
-                      onClick={refineCode}
-                      disabled={isRefining || !refinementInstruction.trim()}
-                      className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-700 disabled:cursor-not-allowed text-white rounded-lg transition-all text-sm font-medium flex items-center justify-center gap-2"
-                    >
-                      {isRefining ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                          doing the thing...
-                        </>
-                      ) : (
-                        <>
-                          <GhostIcon className="w-4 h-4" />
-                          ship it
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
+            <RefinementDialog
+              isOpen={showRefinementDialog}
+              isRefining={isRefining}
+              instruction={refinementInstruction}
+              onClose={() => setShowRefinementDialog(false)}
+              onInstructionChange={setRefinementInstruction}
+              onSubmit={refineCode}
+            />
           </div>
         ) : pastedImage ? (
           <div className="space-y-4">
