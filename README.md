@@ -1,7 +1,7 @@
 # 👻 Mimic
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![GitHub release](https://img.shields.io/github/v/release/yourusername/mimic-desktop)](https://github.com/yourusername/mimic-desktop/releases)
+[![GitHub release](https://img.shields.io/github/v/release/hr23232323/mimic)](https://github.com/hr23232323/mimic/releases)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 **Your UI is ready. You just haven't pasted it yet.**
@@ -15,7 +15,7 @@ Built with **Tauri v2**, **Rust**, and **GPT-5.1**.
 ## 🚀 Quick Start
 
 ### Download (Easiest)
-**[⬇️ Download Latest Release](https://github.com/yourusername/mimic-desktop/releases/latest)**
+**[⬇️ Download Latest Release](https://github.com/hr23232323/mimic/releases/latest)**
 
 Pick your platform:
 - **macOS**: Download `.dmg` → Drag to Applications
@@ -67,8 +67,8 @@ So I built this. It sits in your menu bar. You paste a screenshot. It gives you 
 
 ### Run It
 ```bash
-git clone https://github.com/yourusername/mimic-desktop.git
-cd mimic-desktop
+git clone https://github.com/hr23232323/mimic.git
+cd mimic
 npm install
 npm run tauri dev
 ```
@@ -134,7 +134,7 @@ Built over a weekend with passion. It works, it's fast, and it's ready for your 
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and guidelines.
 
-**Found a bug?** [Open an issue](https://github.com/yourusername/mimic-desktop/issues/new/choose)
+**Found a bug?** [Open an issue](https://github.com/hr23232323/mimic/issues/new/choose)
 
 ---
 
@@ -165,7 +165,7 @@ Powered by OpenAI's GPT-5.1.
 
 ## 📦 Distribution
 
-**Pre-built Binaries:** Available in [GitHub Releases](https://github.com/yourusername/mimic-desktop/releases)
+**Pre-built Binaries:** Available in [GitHub Releases](https://github.com/hr23232323/mimic/releases)
 
 **Homebrew (coming soon):**
 ```bash
